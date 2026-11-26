@@ -10,12 +10,14 @@ Usage:
 
 Options:
     --check        Exit with non-zero status if issues are found (for CI).
-    directories    Directories to scan (default: oss/ pgmongo/).
+    directories    Directories to scan (default: pg_documentdb/,
+                   pg_documentdb_core/, pg_documentdb_extended_rum/,
+                   pg_documentdb_gw/, pg_documentdb_gw_host/).
 
 Examples:
     python3 scripts/check_unused_externs.py                            # report only
     python3 scripts/check_unused_externs.py --check                    # CI gate
-    python3 scripts/check_unused_externs.py oss/pg_documentdb/src/     # scan one dir
+    python3 scripts/check_unused_externs.py pg_documentdb/src/         # scan one dir
 """
 
 import os
@@ -81,7 +83,13 @@ def find_unused_externs(directories):
 def main():
     check_mode = "--check" in sys.argv
     args = [a for a in sys.argv[1:] if a != "--check"]
-    directories = args if args else ["oss/", "pgmongo/"]
+    directories = args if args else [
+        "pg_documentdb/",
+        "pg_documentdb_core/",
+        "pg_documentdb_extended_rum/",
+        "pg_documentdb_gw/",
+        "pg_documentdb_gw_host/",
+    ]
 
     for d in directories:
         if not os.path.isdir(d):
