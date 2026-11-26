@@ -14,6 +14,8 @@ Sources: [workspace manifest](../pg_documentdb_gw/Cargo.toml), [core entry point
 
 ## Protocol, authentication, and SQL boundaries
 
+Read the applicable shared [collation](documentdb-common.instructions.md#collation-coverage) and [response/error contracts](documentdb-common.instructions.md#error-contracts-and-failure-visibility), including tests of those behaviors. These section references do not load unrelated backend implementation requirements.
+
 Preserve framing and size bounds, request/response IDs, BSON ownership, and required-response versus one-way behavior. Reject invalid input explicitly; do not manufacture a success response when decoding or execution fails.
 
 Keep authentication transitions and authorized/unauthorized routing consistent with the current router. Authorization includes resource ownership and backend privileges; authenticating a connection alone does not establish permission for every operation.

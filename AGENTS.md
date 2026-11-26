@@ -16,6 +16,8 @@ Do not weaken tests or fabricate validation. Report failed, blocked, and unexecu
 
 Explicitly read the relevant files below; Markdown links alone do not guarantee automatic loading. Select by affected behavior, including changes to interfaces outside a component's directory.
 
+Construction and review use the same [authoring conventions](.agents/instructions.md#authoring-conventions) and applicable component contracts. For backend/gateway behavior or tests of that behavior, read the shared [collation](.agents/documentdb-common.instructions.md#collation-coverage) and [response/error contracts](.agents/documentdb-common.instructions.md#error-contracts-and-failure-visibility) when affected, without loading unrelated backend implementation rules for gateway or test-only work.
+
 | Task or component | Required references |
 | --- | --- |
 | Any implementation/review/testing | [Operating policy](.agents/instructions.md); [shared testing strategy](.agents/TESTING.md). |

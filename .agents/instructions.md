@@ -50,6 +50,24 @@ Do not suppress failures, introduce success-shaped fallbacks, disable checks, we
 
 Architecture-affecting changes must explain affected boundaries and update the descriptive reference with evidence. Do not present a new inference as a maintainer-approved constraint.
 
+## Authoring conventions
+
+Construction and review use the same engineering requirements in their existing instruction owners. Keep each detailed contract in one owner and load it from related guidance rather than copying it. The [review skill](skills/pr-review/SKILL.md) owns independent investigation, contract-verification questions, evidence thresholds, severity, and reporting; it does not define a second set of implementation requirements.
+
+For backend/gateway behavior or tests of that behavior, also read the applicable [collation](documentdb-common.instructions.md#collation-coverage) and [response/error contracts](documentdb-common.instructions.md#error-contracts-and-failure-visibility). Loading those sections does not make unrelated backend implementation rules apply to gateway or test-only work.
+
+Author new error messages independently. Wire-protocol compatibility can require error codes and response fields, but does not justify copying another implementation's message wording or distinctive formatting. Do not rewrite unrelated pre-existing messages.
+
+### Reusing computed results
+
+Reuse already computed parse results, tree walks, catalog data, merges, and estimates when inputs and relevant state are unchanged, especially in planning and hot paths. Avoid duplicate result objects, preserve required side effects, and keep reused data valid for every consumer. Prefer local reuse over long-lived caches.
+
+Before reusing a result, verify that inputs and relevant state have not changed, required validation and side effects still run, and the result remains valid for every consumer. Do not reuse stale results or pointers to freed or reset storage, or add a long-lived cache merely to avoid local recomputation. Trace actual consumers before removing a second computation or representation. Backend work additionally follows the [state/cache ownership rules](documentdb-common.instructions.md#computed-results-and-cache-ownership).
+
+### Existing code style
+
+When modifying existing files, the file's current style takes precedence over general style guidelines. This does not waive correctness, safety, or enforced formatting requirements.
+
 ## Evidence and handoff
 
 Identify the contribution scope and revision, relevant implementation evidence, changes made, and intended behavioral differences. Report findings with concrete failure scenarios; distinguish facts, inferences, and questions.

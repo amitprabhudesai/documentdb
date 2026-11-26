@@ -38,6 +38,8 @@ Prefer existing test files and a few focused cases that fail without the fix. Fo
 
 Choose the smallest adequate checks and explain the selection. Add broader component/compatibility coverage when a shared primitive, lifecycle, error mapping, or interface changes. Verify selectors actually ran the intended tests; zero selected tests is not successful coverage.
 
+For backend/gateway behavior or tests of that behavior, read the applicable shared [collation](documentdb-common.instructions.md#collation-coverage) and [response/error contracts](documentdb-common.instructions.md#error-contracts-and-failure-visibility). Select coverage for the changed path and inspect response types, per-item failures, failure visibility, and cleanup as applicable. These section references do not impose unrelated backend implementation rules on test-only work.
+
 Run dependent commands in the required order and do not race suites that share ports, global state, or output directories. Preserve failing outputs before rerunning or changing expectations. Reproduce a bug on the baseline when feasible; otherwise identify why the added case would fail without the change and disclose that baseline execution was not performed.
 
 Do not suppress errors, relax assertions, change schedules to hide failures, or promote unreviewed expected output. Follow the [PostgreSQL expectation workflow](postgres.TESTING.md#changing-regression-expectations).

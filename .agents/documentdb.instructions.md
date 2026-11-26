@@ -11,6 +11,8 @@ This is the backend entry point and the owner of main-extension behavior under `
 
 For backend C, SQL, and tests, first read the trusted [operating policy](instructions.md), [PostgreSQL safety](postgres.instructions.md), [shared backend contracts](documentdb-common.instructions.md), and [PostgreSQL testing strategy](postgres.TESTING.md).
 
+Apply the [repository authoring conventions](instructions.md#authoring-conventions), including computed-result reuse and existing-code style, during construction as well as review.
+
 | Component or affected behavior | Read |
 | --- | --- |
 | `pg_documentdb_core/`, BSON representations or primitives | [Core entry point](documentdb-core.instructions.md) |
@@ -40,7 +42,11 @@ The following sections apply to main-extension behavior, not automatically to ev
 - Before reusing a collection metadata object, verify that its loader populated the fields the next operation needs, including shard keys and default collation. A lookup by collection ID can return a different set of fields from a full catalog lookup. Reuse complete existing metadata or populate command-owned state; do not add fields to a long-lived cache merely to eliminate a lookup.
 - If an insert or upsert can create a collection, resolve inherited options from the final collection metadata after creation or a concurrent creator has won, under the required lock. Do this before deriving shard routing and building writes that depend on those options. Add a deterministic concurrency test for that interleaving; do not assume every delete path has the same creation race.
 - Preserve each command's documented distinction between an absent option, null, an empty document, and an explicit default such as simple collation. Keep "needs resolution" separate from "resolved to the default": an empty parsed string alone does not distinguish them.
-- Carry resolved options through both find and aggregate continuations and the affected worker paths. Do not resolve them again on `GetMore` or copy unresolved state into a continuation. Trace every consumer and parsing boundary before removing an original or parsed representation; apply the shared [ownership rules](documentdb-common.instructions.md#computed-results-and-cache-ownership).
+- Carry resolved options through both find and aggregate continuations and the affected worker paths. Do not resolve them again on `GetMore` or copy unresolved state into a continuation. Apply the [command-representation contract](#original-and-parsed-command-representations) and shared [ownership rules](documentdb-common.instructions.md#computed-results-and-cache-ownership) before removing an original or parsed representation.
+
+### Original and parsed command representations
+
+Original input and parsed/effective values are not automatically duplicate state. A worker command may need the original BSON while another path consumes a parsed value. Check the consumers and where parsing errors must be reported before removing a representation or moving parsing earlier.
 
 ## Maintenance Commands and Diagnostics
 

@@ -7,6 +7,8 @@ applyTo: 'pg_documentdb/**,pg_documentdb_core/**,pg_documentdb_extended_rum/**'
 
 Apply these shared contracts with [PostgreSQL safety](postgres.instructions.md) and the component guidance selected by [DocumentDB backend selection](documentdb.instructions.md#instruction-selection). The trusted [operating policy](instructions.md) governs permissions; imported guidance does not authorize execution or impose private-service deployment requirements on this OSS repository.
 
+The [collation](#collation-coverage) and [response/error contracts](#error-contracts-and-failure-visibility) also govern gateway consumers and tests of those contracts. Read those sections when they are affected; doing so does not make the remaining backend implementation rules apply to those consumers.
+
 ## General Instructions
 
 - Keep the public OSS extensions independent of private-service names, schemas, and implementation. Use the owning extension's schema-name defines rather than hard-coded names from another deployment.
@@ -41,9 +43,43 @@ Apply these shared contracts with [PostgreSQL safety](postgres.instructions.md) 
 
 ## Computed Results and Cache Ownership
 
-- Reuse complete existing computed results throughout planning and execution, not just mutations. Trace all consumers before replacing the original representation. Do not reuse a result after its backing memory is reset or the state it depends on is invalidated.
+- Apply the [repository computed-result reuse contract](instructions.md#reusing-computed-results) throughout planning and execution, not just mutations. Do not reuse a result after its backing memory is reset or the state it depends on is invalidated.
 - Store reusable query/planning data in existing planner or executor state and pass that state to helpers. Do not introduce mutable file-scope globals or function-static variables to cache computed state. Cross-query caching must use established `CacheMemoryContext`-owned cache objects or explicitly designed shared-memory structures, with defined ownership, cache keys, invalidation, and synchronization where needed. Allocating data in `CacheMemoryContext` alone does not make it safe to reuse across queries.
 - Minimize `CacheMemoryContext` contents: use it only when cross-query retention is absolutely necessary, and justify why planner/executor state or on-demand lookup is insufficient for each added object or field. Retain only the minimum required data. An existing cache, a small field, or a hot-path label alone is not justification. Do not retain full documents or extra derived fields when a compact value or an on-demand lookup suffices.
+
+### Rarely used variable-size payloads in hot-path caches
+
+When adding a variable-size or pointer-backed payload to a cache entry or metadata struct used on a hot path, establish the pointee's allocation context, size bound, entry count, duplicate cache representations, copy paths, and consumers. A pointer-sized struct field does not make the payload cheap: the long-lived cache still owns the pointee, and parallel name/id caches or caller-owned deep copies can multiply its footprint.
+
+For payloads needed only by rare metadata or administration paths rather than hot-path execution, prefer an on-demand catalog lookup or a bounded compact or derived representation over avoidable cache retention. Establish actual consumers and access frequency, the payload's enforced size bound, its cache lifetime and invalidation behavior, and every cache or copy that amplifies the allocation before choosing a representation. Account for an externally influenced or unbounded payload retained per entry or copy that creates a concrete availability or out-of-memory risk.
+
+Small bounded metadata and values needed broadly by hot-path consumers are not avoidable merely because they are cached.
+
+## Redundant parallel traversals of the same tree
+
+When two functions recursively walk the same structure, such as a plan tree, expression tree, or BSON document, over the same shape, consider a single traversal that produces both results, for example through an out-parameter. Apply this preference only when both walks demonstrably visit the same nodes in the same order and merging does not entangle unrelated concerns; walks sharing only a superficial shape do not qualify.
+
+This is a maintainability preference, not a demonstrated bug. Parallel descents must be kept in lock-step: adding a node shape to one can silently diverge the other.
+
+## Collation coverage
+
+When a change modifies comparison, matching, sorting, grouping, aggregation, distinct values, index terms or ordering, query planning, or distributed execution of those operations, determine whether the changed behavior is required to honor collation.
+
+If collation applies, include focused tests with a non-default collation that exercise the same changed execution path. Existing collation tests elsewhere in the owning suite do not prove that the changed operation handles collation correctly. Select the owning SQL and/or gateway coverage through [shared testing](TESTING.md#selection-and-execution) and its component strategies; verify that the intended index, worker, or other affected path actually runs rather than a different implementation or fallback.
+
+Do not require collation coverage for operations that are documented or explicitly validated as not supporting collation.
+
+## Error contracts and failure visibility
+
+- Apply the [repository error-authoring rules](instructions.md#authoring-conventions) to new messages and changed expected output; do not rewrite unrelated pre-existing messages.
+- Preserve BSON response types as well as field names and values. A required double is not interchangeable with Int32 merely because both display as `1`. Check other commands in the affected family, code reading their responses, and their tests. Tests must inspect the BSON type rather than convert values in a way that hides a mismatch. Keep unrelated pre-existing inconsistencies separate from required fixes.
+- Use the established backend error code for the same failure when the gateway already maps it to the required wire-protocol code. Check that mapping before adding an error-code argument or a different code for one branch. Keep separate codes when callers must distinguish different failures.
+- Follow an error from the code creating the response to the code reading it, including raw/pass-through responses. A successful send or dispatch does not mean the operation succeeded if the response contains write errors or a failed job. Preserve the total error count, which error is selected for reporting, which status takes precedence, and diagnostic fields. Do not translate an error code twice.
+- Preserve per-item failure handling in batch commands. Moving item parsing or validation before the per-item error handler must not turn an indexed write error into a command-wide failure. Test a mixed valid/invalid batch, item indexes, and affected ordered/unordered and worker behavior.
+- Establish how the caller discovers failure before treating a normally returning function as a success or a swallowed exception. Some operations raise an error immediately; others record failure in job history that the caller can query. Verify that the status/history code exists and works as documented. Do not add another warning or rethrow merely because the function returns normally. A plan to add history later does not make a failure observable now.
+- Keep deliberately vague authentication errors vague when needed to avoid disclosing account existence, password expiry, or other sensitive authentication state. Preserve safe internal diagnostics without exposing credentials or backend implementation details.
+- Do not expose internal cluster/schema versions in client-facing unsupported-feature errors. Explain the unsupported operation; keep necessary version details in safe internal diagnostics.
+- Test changed error codes, response types/fields, how callers discover failure, and cleanup; a successful request or edited expected message alone is not enough.
 
 ## Mutation Design and Validation
 
