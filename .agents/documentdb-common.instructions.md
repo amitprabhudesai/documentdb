@@ -67,6 +67,8 @@ When a change modifies comparison, matching, sorting, grouping, aggregation, dis
 
 If collation applies, include focused tests with a non-default collation that exercise the same changed execution path. Existing collation tests elsewhere in the owning suite do not prove that the changed operation handles collation correctly. Select the owning SQL and/or gateway coverage through [shared testing](TESTING.md#selection-and-execution) and its component strategies; verify that the intended index, worker, or other affected path actually runs rather than a different implementation or fallback.
 
+For index, sort-pushdown, or index-only changes, use an index-capable test and inspect the full plan as well as query results. Cover the intended optimization and its required fallback, including matching/incompatible query and index collations when relevant. Retain eligible unaffected expressions rather than blanket-disabling optimization. Select only attributes affected by the behavior, such as case, diacritics, strength, locale, or ordering; check both matching and ordering if both can change. Extend an existing owning collation test where suitable and include cross-node coverage only when the affected supported path crosses that boundary.
+
 Do not require collation coverage for operations that are documented or explicitly validated as not supporting collation.
 
 ## Error contracts and failure visibility
