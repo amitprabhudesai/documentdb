@@ -81,6 +81,12 @@ Do not require collation coverage for operations that are documented or explicit
 - Do not expose internal cluster/schema versions in client-facing unsupported-feature errors. Explain the unsupported operation; keep necessary version details in safe internal diagnostics.
 - Test changed error codes, response types/fields, how callers discover failure, and cleanup; a successful request or edited expected message alone is not enough.
 
+## Calling APIs across extensions
+
+- Reuse exported C APIs through their owning headers and declare the corresponding library dependency. Do not copy declarations or include another extension's implementation `.c` files. Preserve the API's transaction, memory-lifetime, schema-availability, and node-execution requirements.
+- Use schema-qualified, parameterized SPI calls through existing query helpers when invoking a SQL API with its PostgreSQL permission checks. Verify the effective execution role and the SQL API's security contract; do not elevate privileges merely to make the call succeed.
+- Direct C calls, `OidFunctionCall*()`, and `FunctionCallInvoke()` do not automatically enforce SQL `EXECUTE` privileges. When direct invocation crosses a SQL authorization boundary, require the applicable checks, such as `PgProcAclCheckCompat(..., GetUserId(), ACL_EXECUTE)`, plus any required schema/object or operation-specific authorization. A proven check in a common caller or callee is sufficient; do not require SQL ACL checks for every trusted internal C helper. Cover denied access when adding or changing such a boundary.
+
 ## Mutation Design and Validation
 
 - Run input and feature-support checks before taking locks or doing writes/DDL when those checks do not depend on changing database state. Preserve permission checks and which error takes precedence. Take the required lock before reading state used to enforce limits or compute an update, or recheck that state under the lock. Rolling back unnecessary DDL does not avoid the work already sent to other nodes.
