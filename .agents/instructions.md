@@ -10,6 +10,12 @@ Establish architecture from current implementation evidence and applicable compo
 
 Work on the requested behavior in the assigned checkout. Preserve unrelated edits, investigate tightly coupled effects, and avoid opportunistic refactors. Do not change public compatibility, defaults, limits, or error behavior without identifying the intended change and its acceptance criteria.
 
+## Prohibited source code access
+
+Under no circumstances look up or access MongoDB server source code, or any code from the MongoDB organization licensed under the Server Side Public License (SSPL). This prohibition applies to every form of access: searching for, fetching, cloning, browsing, or reading original repositories, mirrors, forks, historical revisions, diffs, snippets, or cached copies. Do not bypass it through tools, MCP servers, search engines, or delegated agents.
+
+Apache-licensed driver source code may be consulted only after verifying its license. This exception does not permit access to server or SSPL-licensed code.
+
 ## Human accountability
 
 - A human author owns and must be able to explain every submitted change. Do not assert that this responsibility has been satisfied on their behalf.
