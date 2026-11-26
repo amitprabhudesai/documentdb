@@ -1,6 +1,6 @@
 ---
 name: pr-test
-description: Select and run appropriate tests for a DocumentDB working-tree change, commit range, or pull request using trusted shared and component testing strategies. Use when asked to test a contribution; report exact source identity, commands, results, artifacts, and blocked or unexecuted coverage.
+description: Select and run appropriate DocumentDB backend and gateway tests for a working-tree change, commit range, or pull request. Use for test requests, failure reproduction, regression authoring, collation coverage, and target selection; report exact source identity, commands, results, artifacts, and blocked or unexecuted coverage.
 ---
 
 # Test a contribution
@@ -10,6 +10,8 @@ description: Select and run appropriate tests for a DocumentDB working-tree chan
 Input: an identified contribution and authorization to run selected tests in an approved disposable environment. Output: a coverage rationale and evidence-based report for the tested snapshot.
 
 Invocation does not authorize source fixes, dependency installation, elevation, database resets, shared-service changes, publication, commits, or merging. If requested only to plan tests, produce a selection/preflight report without execution. Honor stricter task and host restrictions.
+
+This skill owns which tests to run and how far to expand coverage. Use trusted [build-documentdb](../build-documentdb/SKILL.md) when binaries, generated SQL, or installed artifacts may be stale, and [run-in-devcontainer](../run-in-devcontainer/SKILL.md) for transport when needed. Return to the requesting workflow instead of invoking it recursively; reuse evidence only for identical final inputs and environment.
 
 ## Establish scope and trust
 
@@ -26,11 +28,15 @@ Do not use production credentials/data or sensitive shared resources. A devconta
 
 Select the smallest adequate existing cases and explain how they detect the changed behavior. Include meaningful invalid/boundary and lifecycle cases as relevant. Escalate coverage for shared primitives, interfaces, upgrades, recovery, or compatibility changes. Select external functional coverage for new user-facing features and report its availability separately.
 
+For new or changed tests, follow [test authoring and behavioral coverage](../../TESTING.md#test-authoring-and-behavioral-coverage), the applicable [collation contract](../../documentdb-common.instructions.md#collation-coverage), and the [PostgreSQL schedule eligibility rules](../../postgres.TESTING.md#schedule-eligibility-and-focused-selection). Do not bypass exclusions with a minimal-target override. Group related eligible tests in one runner invocation while preserving required setup.
+
 Check selector semantics: PostgreSQL `EXTRA_TESTS` adds to a schedule; gateway wrapper arguments are not portable between nextest and cargo-test paths. Unit-only Cargo selection is not necessarily database-free. Verify actual selected tests; zero tests is not a pass.
 
 ## Execute and evaluate
 
 Run only authorized checks with their prerequisites, in dependency order. Serialize runs sharing ports/global state/artifact paths. Preserve command output, exit status, and current-run artifact identity; do not substitute stale JUnit or prior logs.
+
+Verify the final built/installed artifact matches the tested source and selected PostgreSQL installation; rebuilding and installing are separate actions. Expand beyond focused tests only for an affected shared path, required compatibility/lifecycle coverage, schedule dependencies, or a failure needing investigation, not merely because the focused run passed.
 
 For a bug fix, reproduce on the baseline when safely feasible, then on the changed snapshot. If baseline execution is not performed, disclose that and explain the expected regression without claiming reproduction.
 

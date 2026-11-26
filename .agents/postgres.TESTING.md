@@ -18,6 +18,8 @@ make -C pg_documentdb_extended_rum
 
 Builds generate artifacts; installation modifies PostgreSQL extension directories. Installation additionally trims some installed SQL files. Inspect [root routing](../Makefile), [core](../pg_documentdb_core/Makefile), [document](../pg_documentdb/Makefile), and [RUM](../pg_documentdb_extended_rum/Makefile) definitions. Do not install into a shared PostgreSQL instance without authorization.
 
+Use [build-documentdb](skills/build-documentdb/SKILL.md) for incremental, clean, SQL-clean, debug, and separately authorized installation decisions. Verify that test binaries and installed SQL/libraries match the final source and selected PostgreSQL major. Use [run-in-devcontainer](skills/run-in-devcontainer/SKILL.md) for an already approved environment's transport; it does not provision another PostgreSQL version.
+
 ## Existing suites and selection
 
 Run from the repository root after preflight. A full document `check` runs several suites; `check-regress` is narrower but includes its regression-directory isolation/output-validation targets.
@@ -47,6 +49,32 @@ make -C pg_documentdb/src/test/background_worker_tests PROVE_TESTS=t/001_product
 
 Inspect the relevant [regression](../pg_documentdb/src/test/regress/Makefile), [core](../pg_documentdb_core/src/test/regress/Makefile), [RUM](../pg_documentdb/src/test/extended_rum_tests/Makefile), [recovery](../pg_documentdb/src/test/recovery_tests/Makefile), [RUM recovery](../pg_documentdb/src/test/extended_rum_recovery_tests/Makefile), and [worker](../pg_documentdb/src/test/background_worker_tests/Makefile) definitions before changing selectors. Select the RUM mode affected by the contribution; one mode is not proof of all modes.
 
+## Schedule eligibility and focused selection
+
+Before forcing a named test, inspect its owning full schedule and current Makefile mutation rules. For document and extended-RUM SQL regression, generate the complete version-specific schedule under the same `PG_CONFIG` and mode as the intended run:
+
+```
+make -C pg_documentdb/src/test/regress generate_version_schedule
+make -C pg_documentdb/src/test/extended_rum_tests generate_version_schedule
+```
+
+Run only the owning command; pass the verified `PG_CONFIG` when needed. For the built-in resource-manager mode, also pass `RUM_USE_BUILTIN_RMGR=yes` to RUM schedule generation and select the corresponding test target. Generation writes `log/basic_schedule_<major>` without running tests; preserve prior evidence first.
+
+The existing [mutation script](../pg_documentdb/src/test/regress/mutate_schedule.sh) applies version placeholders, the owning `test_mutate_<major>` when present, and built-in resource-manager mutations when selected. Do not invent other mutation mechanisms or reduce the schedule before applying them: expressions can depend on grouping or position.
+
+Intersect focused requests with the final eligible schedule and retain required setup from the owning schedules/fixtures. Minimal targets and `EXTRA_TESTS` can bypass exclusions; they are selectors, not permission to force an excluded path. Report excluded tests/configurations and select supported coverage rather than adding wrappers or expectations to defeat an exclusion. A genuinely new test needs deliberate schedule placement and reviewed version/mode eligibility, not accidental selection through an override.
+
+For other suites, inspect their own selectors and mutation behavior rather than assuming these recipes apply. Group related eligible SQL basenames into one quoted `EXTRA_TESTS` value. Check the runner summary for actual executed cases, not merely a successful Make exit.
+
+After adding or renaming document or extended-RUM SQL tests, select the owning output validator:
+
+```
+make -C pg_documentdb/src/test/regress check-test-output
+make -C pg_documentdb/src/test/extended_rum_tests check-test-output
+```
+
+These validators do not execute SQL or establish correct expectations; use them alongside the run-inspect-promote-rerun workflow. Do not invent a core validator counterpart.
+
 ## Side effects and evidence
 
 SQL regression suites create local temporary PostgreSQL instances and overwrite outputs under their test directories. Current source defaults use core port `58040`, document regression `58050`, document isolation `58051`, and extended RUM `58060`; configuration and suite behavior must be checked before execution. Do not run overlapping copies of a suite or assume a free forwarded development port covers these ports.
@@ -56,6 +84,8 @@ Results, `regression.diffs`, summaries, and `.exitcode` live under the suite dir
 `installcheck`, valgrind, and server-helper targets have different existing-server/startup/reset semantics. Do not substitute them for temporary-instance regression runs without inspecting the target and obtaining authorization for its exact resources. In particular, the server helper's cleanup option is destructive and its default data directory is not automatically a task-owned resource.
 
 Planner/index changes should establish result correctness with and without the affected index/path, relevant isolation/recovery behavior, and plan/performance evidence for performance claims. SQL declarations/upgrades require validation of the affected install/upgrade path; a new-cluster result alone is insufficient.
+
+For parallel-scheduled tests needing refreshed planner statistics, prefer the existing collection-scoped `compact` command with `mode: "updateStats"` when suitable. If direct `ANALYZE` is needed, name its relation; bare `ANALYZE;` can contend with sibling tests' DDL. Inspect setup/cleanup and preserve the owning suite's concurrency assumptions.
 
 ## Changing regression expectations
 
@@ -68,6 +98,8 @@ Never hand-author a pg_regress expected output file to predict a successful resu
 5. Rerun the same test selection, verify it passes, and run required broader/output-validation coverage. Review the final diff for accidental expectation changes.
 
 If the environment cannot run the SQL, leave expectation generation blocked and report it; do not fabricate output. Isolation/TAP tests need their own assertion/expectation discipline.
+
+When output is version-specific or a shared expectation affects several supported majors, repeat the authorized run/review/promotion/rerun for the applicable versions with clean, matching artifacts. Preserve distinct source/configuration and result evidence per version; one version's output does not validate another. Do not broaden a focused baseline update automatically to unavailable providers or every supported version without an affected compatibility requirement.
 
 ## Additional checks and cross-component coverage
 
